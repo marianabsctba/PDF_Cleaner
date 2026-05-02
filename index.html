@@ -321,6 +321,32 @@
       line-height: 1.55;
     }
 
+    .metadata-box {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 18px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #14532d;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .metadata-box strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    .metadata-box ul {
+      margin: 8px 0 0 18px;
+      padding: 0;
+    }
+
+    .metadata-box li {
+      margin: 5px 0;
+    }
+
     footer {
       color: var(--muted);
       font-size: 13px;
@@ -395,6 +421,21 @@
         <div class="status" id="status">Nenhum arquivo carregado ainda.</div>
         <div class="progress"><div class="bar" id="bar"></div></div>
 
+        <div class="metadata-box" id="metadataReport">
+          <strong>Metadados que serão limpos no PDF final</strong>
+          <ul>
+            <li><b>Title</b> / Título</li>
+            <li><b>Author</b> / Autor</li>
+            <li><b>Subject</b> / Assunto</li>
+            <li><b>Keywords</b> / Palavras-chave</li>
+            <li><b>Creator</b> / Aplicação criadora</li>
+            <li><b>Producer</b> / Biblioteca/produtor do PDF</li>
+            <li><b>CreationDate</b> / Data de criação</li>
+            <li><b>ModDate</b> / Data de modificação</li>
+            <li><b>Language</b> / Idioma declarado</li>
+          </ul>
+        </div>
+
         <div class="warning">
           <strong>Aviso honesto:</strong> esta limpeza remove metadados comuns do documento final.
           Não é sanitização forense completa contra XMP embutido, conteúdo oculto, comentários, camadas, anexos internos ou marcas dentro das próprias páginas. PDFs criptografados serão carregados com tentativa de ignorar a proteção, mas alguns podem continuar bloqueados.
@@ -426,8 +467,36 @@
     const bar = document.getElementById("bar");
     const sortByName = document.getElementById("sortByName");
     const cleanMetadata = document.getElementById("cleanMetadata");
+    const metadataReport = document.getElementById("metadataReport");
+
+    const removedMetadataFields = [
+      { field: "Title", label: "Título" },
+      { field: "Author", label: "Autor" },
+      { field: "Subject", label: "Assunto" },
+      { field: "Keywords", label: "Palavras-chave" },
+      { field: "Creator", label: "Aplicação criadora" },
+      { field: "Producer", label: "Biblioteca/produtor do PDF" },
+      { field: "CreationDate", label: "Data de criação" },
+      { field: "ModDate", label: "Data de modificação" },
+      { field: "Language", label: "Idioma declarado" }
+    ];
 
     let files = [];
+
+    function updateMetadataReport(cleaned = false) {
+      const intro = cleaned
+        ? "Metadados removidos/zerados no PDF compilado"
+        : "Metadados que serão limpos no PDF final";
+
+      const items = removedMetadataFields
+        .map(item => `<li><b>${item.field}</b> / ${item.label}</li>`)
+        .join("");
+
+      metadataReport.innerHTML = `
+        <strong>${intro}</strong>
+        <ul>${items}</ul>
+      `;
+    }
 
     function humanSize(bytes) {
       const units = ["B", "KB", "MB", "GB"];
@@ -619,7 +688,12 @@
 
         setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-        setStatus(`PDF compilado com sucesso: ${copiedPages} página(s). Conteúdo preservado e metadados comuns limpos.`, 100);
+        if (cleanMetadata.checked) {
+          updateMetadataReport(true);
+          setStatus(`PDF compilado com sucesso: ${copiedPages} página(s). Conteúdo preservado. A lista de metadados removidos/zerados está exibida abaixo.`, 100);
+        } else {
+          setStatus(`PDF compilado com sucesso: ${copiedPages} página(s). Limpeza de metadados estava desativada.`, 100);
+        }
       } catch (error) {
         console.error(error);
         setStatus(`Erro ao compilar: ${error.message || "PDF protegido, corrompido ou incompatível."}`, 0);
@@ -654,8 +728,20 @@
       renderList();
     });
 
+    cleanMetadata.addEventListener("change", () => {
+      if (cleanMetadata.checked) {
+        updateMetadataReport(false);
+      } else {
+        metadataReport.innerHTML = `
+          <strong>Limpeza de metadados desativada</strong>
+          <ul><li>Nenhum campo será limpo enquanto essa opção estiver desmarcada.</li></ul>
+        `;
+      }
+    });
+
     compileBtn.addEventListener("click", compilePdf);
 
+    updateMetadataReport(false);
     renderList();
   </script>
 </body>
