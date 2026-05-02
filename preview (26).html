@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Clean Compiler | Mariana BS</title>
+
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --danger: #dc2626;
+      --ok: #16a34a;
+      --shadow: 0 20px 50px rgba(15, 23, 42, 0.10);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, .16), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(22, 163, 74, .12), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .wrap {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 42px 0;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap: 24px;
+      align-items: stretch;
+      margin-bottom: 24px;
+    }
+
+    .hero, .side-card, .panel {
+      background: rgba(255,255,255,.9);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(229,231,235,.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 34px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: rgba(37, 99, 235, .08);
+      right: -80px;
+      top: -70px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      color: #1e40af;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    h1 {
+      font-size: clamp(32px, 4vw, 54px);
+      line-height: 1.02;
+      margin: 18px 0 14px;
+      letter-spacing: -1.5px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.65;
+      max-width: 760px;
+      margin: 0;
+    }
+
+    .side-card {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .side-card strong { font-size: 18px; }
+
+    .mini-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .mini-list div { display: flex; gap: 8px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: .9fr 1.1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel { padding: 24px; }
+
+    .drop {
+      border: 2px dashed #93c5fd;
+      background: linear-gradient(180deg, #eff6ff, #ffffff);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      transition: .2s ease;
+      cursor: pointer;
+    }
+
+    .drop:hover, .drop.dragover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .drop svg {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 10px;
+      color: var(--primary);
+    }
+
+    .drop h2 { margin: 0 0 8px; font-size: 22px; }
+
+    .drop p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    input[type="file"] { display: none; }
+
+    .controls {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    label.check {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px;
+      background: #f9fafb;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      color: #374151;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 16px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: .18s ease;
+      font-size: 15px;
+    }
+
+    button.primary { background: var(--primary); color: white; }
+    button.primary:hover { background: var(--primary-dark); }
+
+    button.secondary {
+      background: #f3f4f6;
+      color: #111827;
+      border: 1px solid var(--line);
+    }
+
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .file-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .empty {
+      border: 1px dashed var(--line);
+      color: var(--muted);
+      border-radius: 18px;
+      padding: 22px;
+      text-align: center;
+      background: #fafafa;
+    }
+
+    .file {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fff;
+    }
+
+    .num {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+    }
+
+    .file-name {
+      font-weight: 850;
+      word-break: break-word;
+    }
+
+    .file-meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 3px;
+    }
+
+    .file-btns {
+      display: flex;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border-radius: 12px;
+      background: #f3f4f6;
+      border: 1px solid var(--line);
+      color: #111827;
+    }
+
+    .icon-btn.del {
+      color: var(--danger);
+      background: #fef2f2;
+      border-color: #fecaca;
+    }
+
+    .status {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 16px;
+      background: #f9fafb;
+      border: 1px solid var(--line);
+      color: #374151;
+      line-height: 1.5;
+      min-height: 52px;
+    }
+
+    .progress {
+      height: 10px;
+      width: 100%;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .bar {
+      width: 0%;
+      height: 100%;
+      background: var(--primary);
+      transition: width .2s ease;
+    }
+
+    .warning {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 18px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      padding-top: 28px;
+    }
+
+    @media (max-width: 850px) {
+      header, .grid { grid-template-columns: 1fr; }
+      .hero { padding: 26px; }
+      .actions { grid-template-columns: 1fr; }
+      .file { grid-template-columns: auto 1fr; }
+      .file-btns { grid-column: 1 / -1; justify-content: flex-end; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+    <header>
+      <section class="hero">
+        <span class="badge">PDF Clean Compiler</span>
+        <h1>Una PDFs, inclusive tentando lidar com PDFs protegidos.</h1>
+        <p class="subtitle">
+          Faça upload, ordene os arquivos, compile tudo em um PDF único e limpe metadados comuns do arquivo final.
+          O conteúdo visual das páginas é preservado.
+        </p>
+      </section>
+
+      <aside class="side-card">
+        <div>
+          <strong>Modo corrigido</strong>
+          <div class="mini-list">
+            <div>✓ Copia páginas preservando conteúdo visual.</div>
+            <div>✓ Limpa campos comuns de metadados no PDF final.</div>
+            <div>✓ Baixa tudo localmente, sem servidor.</div>
+          </div>
+        </div>
+        <div class="badge">Processamento local</div>
+      </aside>
+    </header>
+
+    <section class="grid">
+      <section class="panel">
+        <div id="drop" class="drop">
+          <svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+            <path d="M12 16V4m0 0L7 9m5-5 5 5"/>
+            <path d="M20 16.5V19a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2.5"/>
+          </svg>
+          <h2>Enviar PDFs</h2>
+          <p>Clique aqui ou arraste os arquivos para dentro da área.</p>
+          <input id="fileInput" type="file" accept="application/pdf,.pdf" multiple />
+        </div>
+
+        <div class="controls">
+          <label class="check">
+            <input id="sortByName" type="checkbox" />
+            <span>Ordenar automaticamente por nome do arquivo ao adicionar.</span>
+          </label>
+
+          <label class="check">
+            <input id="cleanMetadata" type="checkbox" checked />
+            <span>Limpar metadados comuns do PDF final: título, autor, assunto, palavras-chave, criador, produtor e datas.</span>
+          </label>
+        </div>
+
+        <div class="actions">
+          <button class="primary" id="compileBtn" disabled>Compilar PDF limpo</button>
+          <button class="secondary" id="clearBtn" disabled>Limpar lista</button>
+        </div>
+
+        <div class="status" id="status">Nenhum arquivo carregado ainda.</div>
+        <div class="progress"><div class="bar" id="bar"></div></div>
+
+        <div class="warning">
+          <strong>Aviso honesto:</strong> esta limpeza remove metadados comuns do documento final.
+          Não é sanitização forense completa contra XMP embutido, conteúdo oculto, comentários, camadas, anexos internos ou marcas dentro das próprias páginas. PDFs criptografados serão carregados com tentativa de ignorar a proteção, mas alguns podem continuar bloqueados.
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 style="margin:0 0 12px;">Arquivos na compilação</h2>
+        <div id="fileList" class="file-list">
+          <div class="empty">A lista está vazia. O PDF ainda está na fase “sumiu, ninguém sabe, ninguém viu”.</div>
+        </div>
+      </section>
+    </section>
+
+    <footer>
+      Mariana BS – Cybersecurity Engineer · Ferramenta local para compilação e limpeza básica de metadados
+    </footer>
+  </main>
+
+  <script>
+    const { PDFDocument } = PDFLib;
+
+    const fileInput = document.getElementById("fileInput");
+    const drop = document.getElementById("drop");
+    const fileList = document.getElementById("fileList");
+    const compileBtn = document.getElementById("compileBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const statusBox = document.getElementById("status");
+    const bar = document.getElementById("bar");
+    const sortByName = document.getElementById("sortByName");
+    const cleanMetadata = document.getElementById("cleanMetadata");
+
+    let files = [];
+
+    function humanSize(bytes) {
+      const units = ["B", "KB", "MB", "GB"];
+      let size = bytes;
+      let unit = 0;
+      while (size >= 1024 && unit < units.length - 1) {
+        size /= 1024;
+        unit++;
+      }
+      return `${size.toFixed(size < 10 && unit > 0 ? 1 : 0)} ${units[unit]}`;
+    }
+
+    function setStatus(msg, pct = null) {
+      statusBox.textContent = msg;
+      if (pct !== null) bar.style.width = `${pct}%`;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[char]));
+    }
+
+    function renderList() {
+      fileList.innerHTML = "";
+
+      if (!files.length) {
+        fileList.innerHTML = `<div class="empty">A lista está vazia. O PDF ainda está na fase “sumiu, ninguém sabe, ninguém viu”.</div>`;
+        compileBtn.disabled = true;
+        clearBtn.disabled = true;
+        setStatus("Nenhum arquivo carregado ainda.", 0);
+        return;
+      }
+
+      files.forEach((file, index) => {
+        const row = document.createElement("div");
+        row.className = "file";
+        row.innerHTML = `
+          <div class="num">${index + 1}</div>
+          <div>
+            <div class="file-name">${escapeHtml(file.name)}</div>
+            <div class="file-meta">${humanSize(file.size)} · PDF</div>
+          </div>
+          <div class="file-btns">
+            <button class="icon-btn" title="Subir" ${index === 0 ? "disabled" : ""}>↑</button>
+            <button class="icon-btn" title="Descer" ${index === files.length - 1 ? "disabled" : ""}>↓</button>
+            <button class="icon-btn del" title="Remover">×</button>
+          </div>
+        `;
+
+        const [up, down, del] = row.querySelectorAll("button");
+        up.onclick = () => moveFile(index, -1);
+        down.onclick = () => moveFile(index, 1);
+        del.onclick = () => removeFile(index);
+
+        fileList.appendChild(row);
+      });
+
+      compileBtn.disabled = false;
+      clearBtn.disabled = false;
+      setStatus(`${files.length} arquivo(s) pronto(s) para compilação.`, 0);
+    }
+
+    function moveFile(index, direction) {
+      const target = index + direction;
+      if (target < 0 || target >= files.length) return;
+      [files[index], files[target]] = [files[target], files[index]];
+      renderList();
+    }
+
+    function removeFile(index) {
+      files.splice(index, 1);
+      renderList();
+    }
+
+    function addFiles(selected) {
+      const pdfs = Array.from(selected).filter(file =>
+        file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+      );
+
+      if (!pdfs.length) {
+        setStatus("Nenhum PDF válido foi selecionado.", 0);
+        return;
+      }
+
+      files.push(...pdfs);
+
+      if (sortByName.checked) {
+        files.sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { numeric: true }));
+      }
+
+      renderList();
+    }
+
+    function applyCleanMetadata(pdfDoc) {
+      const epoch = new Date("1970-01-01T00:00:00Z");
+
+      pdfDoc.setTitle("");
+      pdfDoc.setAuthor("");
+      pdfDoc.setSubject("");
+      pdfDoc.setKeywords([]);
+      pdfDoc.setCreator("");
+      pdfDoc.setProducer("");
+      pdfDoc.setCreationDate(epoch);
+      pdfDoc.setModificationDate(epoch);
+      pdfDoc.setLanguage("");
+    }
+
+    async function compilePdf() {
+      if (!files.length) return;
+
+      compileBtn.disabled = true;
+      clearBtn.disabled = true;
+      setStatus("Iniciando compilação do PDF...", 5);
+
+      try {
+        const outputPdf = await PDFDocument.create();
+
+        let copiedPages = 0;
+
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          setStatus(`Lendo ${file.name}...`, Math.round((i / files.length) * 80));
+
+          const bytes = await file.arrayBuffer();
+
+          let sourcePdf;
+
+          try {
+            sourcePdf = await PDFDocument.load(bytes, {
+              ignoreEncryption: true,
+              updateMetadata: false
+            });
+          } catch (loadError) {
+            throw new Error(`Não consegui abrir "${file.name}". Ele pode estar criptografado de forma forte, corrompido ou protegido contra leitura.`);
+          }
+
+          const indices = sourcePdf.getPageIndices();
+
+          if (!indices.length) {
+            throw new Error(`O arquivo "${file.name}" não possui páginas copiáveis.`);
+          }
+
+          let pages;
+          try {
+            pages = await outputPdf.copyPages(sourcePdf, indices);
+          } catch (copyError) {
+            throw new Error(`Não consegui copiar as páginas de "${file.name}". O PDF pode ter proteção interna ou recursos incompatíveis.`);
+          }
+
+          for (const page of pages) {
+            outputPdf.addPage(page);
+            copiedPages++;
+          }
+
+          setStatus(`Copiadas ${copiedPages} página(s).`, Math.round(((i + 1) / files.length) * 80));
+        }
+
+        if (cleanMetadata.checked) {
+          setStatus("Limpando metadados comuns do PDF final...", 90);
+          applyCleanMetadata(outputPdf);
+        } else {
+          setStatus("Gerando PDF final sem limpeza de metadados...", 90);
+        }
+
+        const finalBytes = await outputPdf.save({
+          useObjectStreams: false,
+          addDefaultPage: false
+        });
+
+        if (!finalBytes || finalBytes.length < 1000) {
+          throw new Error("PDF final ficou pequeno demais. Compilação abortada para evitar arquivo inválido.");
+        }
+
+        const blob = new Blob([finalBytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+        a.href = url;
+        a.download = `pdf-compilado-sem-metadados-${timestamp}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+        setStatus(`PDF compilado com sucesso: ${copiedPages} página(s). Conteúdo preservado e metadados comuns limpos.`, 100);
+      } catch (error) {
+        console.error(error);
+        setStatus(`Erro ao compilar: ${error.message || "PDF protegido, corrompido ou incompatível."}`, 0);
+      } finally {
+        compileBtn.disabled = files.length === 0;
+        clearBtn.disabled = files.length === 0;
+      }
+    }
+
+    drop.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", event => {
+      addFiles(event.target.files);
+      fileInput.value = "";
+    });
+
+    drop.addEventListener("dragover", event => {
+      event.preventDefault();
+      drop.classList.add("dragover");
+    });
+
+    drop.addEventListener("dragleave", () => drop.classList.remove("dragover"));
+
+    drop.addEventListener("drop", event => {
+      event.preventDefault();
+      drop.classList.remove("dragover");
+      addFiles(event.dataTransfer.files);
+    });
+
+    clearBtn.addEventListener("click", () => {
+      files = [];
+      renderList();
+    });
+
+    compileBtn.addEventListener("click", compilePdf);
+
+    renderList();
+  </script>
+</body>
+</html>
